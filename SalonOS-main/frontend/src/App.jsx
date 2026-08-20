@@ -4,7 +4,14 @@ import Navbar from './components/common/Navbar';
 import Sidebar from './components/common/Sidebar';
 import Modal from './components/common/Modal';
 import Toast from './components/common/Toast';
+import WhatsAppModal from './components/common/WhatsAppModal';
 
+// 4-Pillar Core Pages
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import CustomerApp from './pages/customer/CustomerApp';
+import StaffApp from './pages/staff/StaffApp';
+
+// Salon Owner POS & Operations Pages
 import Dashboard from './pages/Dashboard';
 import Appointments from './pages/Appointments';
 import BillingPOS from './pages/BillingPOS';
@@ -19,6 +26,7 @@ export default function App() {
   const { 
     activeTab, 
     setActiveTab, 
+    activeRole,
     services, 
     staff, 
     customers, 
@@ -98,6 +106,7 @@ export default function App() {
       customer_phone: bookingForm.customer_phone || '+91 99999 00000',
       service_name: srv ? srv.name : 'Salon Service',
       staff_name: stf ? stf.full_name : 'Lead Stylist',
+      staff_id: stf ? stf.id : 1,
       start_time: bookingForm.start_time,
       date: bookingForm.date,
       status: 'scheduled',
@@ -150,56 +159,72 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <Sidebar />
+      {/* Sidebar only appears in Salon Owner POS mode */}
+      {activeRole === 'owner' && <Sidebar />}
 
-      <div className="main-content">
+      <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Navbar onOpenNewBooking={() => setIsBookingModalOpen(true)} />
 
-        <main className="page-wrapper">
-          {activeTab === 'dashboard' && (
-            <Dashboard 
-              onOpenNewBooking={() => setIsBookingModalOpen(true)} 
-              onOpenNewClient={() => setIsCustomerModalOpen(true)} 
-            />
+        <main className="page-wrapper" style={{ flex: 1, padding: activeRole === 'owner' ? '2rem' : '1.5rem 2rem' }}>
+          {/* Pillar 1: SaaS Super Admin Portal */}
+          {activeRole === 'superadmin' && <SuperAdminDashboard />}
+
+          {/* Pillar 3: Stylist / Barber Mobile APK Simulator */}
+          {activeRole === 'staff' && <StaffApp />}
+
+          {/* Pillar 4: Customer Mobile Booking App Simulator */}
+          {activeRole === 'customer' && <CustomerApp />}
+
+          {/* Pillar 2: Salon Owner Backoffice & POS Suite */}
+          {activeRole === 'owner' && (
+            <>
+              {activeTab === 'dashboard' && (
+                <Dashboard 
+                  onOpenNewBooking={() => setIsBookingModalOpen(true)} 
+                  onOpenNewClient={() => setIsCustomerModalOpen(true)} 
+                />
+              )}
+
+              {activeTab === 'appointments' && (
+                <Appointments 
+                  onOpenNewBooking={() => setIsBookingModalOpen(true)} 
+                  onSendToPOS={handleSendAppointmentToPOS}
+                />
+              )}
+
+              {activeTab === 'billing' && (
+                <BillingPOS 
+                  incomingCartItem={incomingPOSItem}
+                  onClearIncomingItem={() => setIncomingPOSItem(null)}
+                />
+              )}
+
+              {activeTab === 'customers' && (
+                <Customers onOpenNewClient={() => setIsCustomerModalOpen(true)} />
+              )}
+
+              {activeTab === 'services' && (
+                <Services onOpenNewService={() => setIsServiceModalOpen(true)} />
+              )}
+
+              {activeTab === 'staff' && (
+                <Staff onOpenNewStaff={() => setIsStaffModalOpen(true)} />
+              )}
+
+              {activeTab === 'inventory' && (
+                <Inventory onOpenNewProduct={() => setIsProductModalOpen(true)} />
+              )}
+
+              {activeTab === 'marketing' && <Marketing />}
+
+              {activeTab === 'settings' && <Settings />}
+            </>
           )}
-
-          {activeTab === 'appointments' && (
-            <Appointments 
-              onOpenNewBooking={() => setIsBookingModalOpen(true)} 
-              onSendToPOS={handleSendAppointmentToPOS}
-            />
-          )}
-
-          {activeTab === 'billing' && (
-            <BillingPOS 
-              incomingCartItem={incomingPOSItem}
-              onClearIncomingItem={() => setIncomingPOSItem(null)}
-            />
-          )}
-
-          {activeTab === 'customers' && (
-            <Customers onOpenNewClient={() => setIsCustomerModalOpen(true)} />
-          )}
-
-          {activeTab === 'services' && (
-            <Services onOpenNewService={() => setIsServiceModalOpen(true)} />
-          )}
-
-          {activeTab === 'staff' && (
-            <Staff onOpenNewStaff={() => setIsStaffModalOpen(true)} />
-          )}
-
-          {activeTab === 'inventory' && (
-            <Inventory onOpenNewProduct={() => setIsProductModalOpen(true)} />
-          )}
-
-          {activeTab === 'marketing' && <Marketing />}
-
-          {activeTab === 'settings' && <Settings />}
         </main>
       </div>
 
       <Toast />
+      <WhatsAppModal />
 
       {/* New Appointment Modal */}
       <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title="Book New Appointment">
@@ -251,12 +276,11 @@ export default function App() {
               value={bookingForm.staff_id}
               onChange={(e) => setBookingForm({ ...bookingForm, staff_id: e.target.value })}
               className="form-select"
-              required
             >
-              <option value="">Select Stylist</option>
-              {staff.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.full_name} ({st.designation})
+              <option value="">⚡ Any Available Stylist (Auto-Dispatch)</option>
+              {staff.map((stf) => (
+                <option key={stf.id} value={stf.id}>
+                  {stf.full_name} ({stf.designation})
                 </option>
               ))}
             </select>
@@ -264,25 +288,26 @@ export default function App() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Time Slot</label>
-              <input
-                type="text"
-                placeholder="11:30 AM"
-                value={bookingForm.start_time}
-                onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
-                className="form-input"
-                required
-              />
-            </div>
-            <div className="form-group">
               <label className="form-label">Date</label>
               <input
                 type="date"
+                required
                 value={bookingForm.date}
                 onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
                 className="form-input"
-                required
               />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Time Slot</label>
+              <select
+                value={bookingForm.start_time}
+                onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
+                className="form-select"
+              >
+                {['10:00 AM', '11:00 AM', '12:00 PM', '01:30 PM', '02:30 PM', '03:30 PM', '05:00 PM', '06:30 PM'].map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -291,58 +316,59 @@ export default function App() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Schedule Booking
+              Confirm & Dispatch
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* New Customer Modal */}
+      {/* New Client Modal */}
       <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title="Register New Client">
         <form onSubmit={handleCreateCustomer}>
           <div className="form-group">
-            <label className="form-label">Full Name</label>
+            <label className="form-label">Client Full Name</label>
             <input
               type="text"
               required
-              placeholder="e.g. Meera Kapoor"
+              placeholder="e.g. Vikram Malhotra"
               value={clientForm.full_name}
               onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })}
               className="form-input"
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Mobile Number</label>
-            <input
-              type="tel"
-              required
-              placeholder="+91 98765 12345"
-              value={clientForm.phone}
-              onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
-              className="form-input"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Mobile Number</label>
+              <input
+                type="tel"
+                required
+                placeholder="+91 98765 00000"
+                value={clientForm.phone}
+                onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                className="form-input"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                placeholder="client@gmail.com"
+                value={clientForm.email}
+                onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                className="form-input"
+              />
+            </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email Address (Optional)</label>
-            <input
-              type="email"
-              placeholder="meera@example.com"
-              value={clientForm.email}
-              onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Preferences / Hair or Skin Notes</label>
+            <label className="form-label">Style / Allergy Notes</label>
             <textarea
-              placeholder="e.g. Prefers organic scalp treatments, allergic to ammonia..."
+              rows="3"
+              placeholder="e.g. Prefers ammonia-free hair color, sensitive skin"
               value={clientForm.notes}
               onChange={(e) => setClientForm({ ...clientForm, notes: e.target.value })}
               className="form-textarea"
-              rows={3}
             />
           </div>
 
@@ -351,21 +377,21 @@ export default function App() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Save Client
+              Save Client Profile
             </button>
           </div>
         </form>
       </Modal>
 
       {/* New Service Modal */}
-      <Modal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} title="Add New Service to Menu">
+      <Modal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} title="Add Service to Menu">
         <form onSubmit={handleCreateService}>
           <div className="form-group">
-            <label className="form-label">Service Title</label>
+            <label className="form-label">Service Name</label>
             <input
               type="text"
               required
-              placeholder="e.g. Collagen Rejuvenation Facial"
+              placeholder="e.g. Botanical Hair Scalp Spa"
               value={serviceForm.name}
               onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
               className="form-input"
@@ -381,24 +407,22 @@ export default function App() {
                 className="form-select"
               >
                 <option value="Hair">Hair</option>
-                <option value="Facial">Facial</option>
-                <option value="Spa">Spa</option>
-                <option value="Nails">Nails</option>
-                <option value="Bridal">Bridal</option>
-                <option value="Grooming">Grooming</option>
+                <option value="Facial">Facial & Skin</option>
+                <option value="Spa">Spa & Massage</option>
+                <option value="Nails">Nails & Art</option>
+                <option value="Bridal">Bridal & Makeup</option>
+                <option value="Grooming">Men's Grooming</option>
               </select>
             </div>
-
             <div className="form-group">
               <label className="form-label">Duration (Minutes)</label>
               <input
                 type="number"
-                min="15"
-                step="15"
+                min="10"
+                step="5"
                 value={serviceForm.duration}
                 onChange={(e) => setServiceForm({ ...serviceForm, duration: Number(e.target.value) })}
                 className="form-input"
-                required
               />
             </div>
           </div>
@@ -408,21 +432,10 @@ export default function App() {
             <input
               type="number"
               min="0"
+              required
               value={serviceForm.price}
               onChange={(e) => setServiceForm({ ...serviceForm, price: Number(e.target.value) })}
               className="form-input"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Service Description</label>
-            <textarea
-              placeholder="Brief summary of the treatment..."
-              value={serviceForm.description}
-              onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
-              className="form-textarea"
-              rows={2}
             />
           </div>
 
@@ -438,50 +451,50 @@ export default function App() {
       </Modal>
 
       {/* New Staff Modal */}
-      <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title="Add Team Member / Stylist">
+      <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title="Register Staff Stylist">
         <form onSubmit={handleCreateStaff}>
           <div className="form-group">
             <label className="form-label">Full Name</label>
             <input
               type="text"
               required
-              placeholder="e.g. Siddharth Verma"
+              placeholder="e.g. Sneha Patel"
               value={staffForm.full_name}
               onChange={(e) => setStaffForm({ ...staffForm, full_name: e.target.value })}
               className="form-input"
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Designation / Role</label>
-            <input
-              type="text"
-              placeholder="e.g. Creative Hair Director"
-              value={staffForm.designation}
-              onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
-              className="form-input"
-              required
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Designation</label>
+              <input
+                type="text"
+                placeholder="Senior Colorist"
+                value={staffForm.designation}
+                onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
+                className="form-input"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Contact Number</label>
+              <input
+                type="tel"
+                placeholder="+91 98000 00000"
+                value={staffForm.phone}
+                onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                className="form-input"
+              />
+            </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">Specialization</label>
             <input
               type="text"
-              placeholder="e.g. Global Hair Colour & Balayage"
+              placeholder="e.g. Balayage, Keratin, Organic Spas"
               value={staffForm.specialization}
               onChange={(e) => setStaffForm({ ...staffForm, specialization: e.target.value })}
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Mobile Number</label>
-            <input
-              type="tel"
-              placeholder="+91 98111 22334"
-              value={staffForm.phone}
-              onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
               className="form-input"
             />
           </div>
@@ -491,7 +504,7 @@ export default function App() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Add Staff
+              Register Stylist
             </button>
           </div>
         </form>

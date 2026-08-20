@@ -1,84 +1,246 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { 
-  Search, 
-  PlusCircle, 
-  Moon, 
-  Sun, 
-  Sparkles, 
-  Bell, 
-  CheckCircle2, 
+import {
+  Search,
+  PlusCircle,
+  Moon,
+  Sun,
+  Sparkles,
+  Bell,
+  CheckCircle2,
   Server,
-  Scissors
+  Scissors,
+  Shield,
+  Smartphone,
+  Users,
+  Store,
+  MessageSquare,
+  ChevronDown
 } from 'lucide-react';
 
 export default function Navbar({ onOpenNewBooking }) {
-  const { theme, setTheme, org, liveBackendConnected, appointments } = useApp();
-  const [showNotifications, setShowNotifications] = useState(false);
+  const {
+    theme,
+    setTheme,
+    org,
+    tenants,
+    activeTenantId,
+    setActiveTenantId,
+    activeRole,
+    setActiveRole,
+    liveBackendConnected,
+    appointments,
+    triggerWhatsApp,
+  } = useApp();
 
-  const pendingAppointments = appointments.filter(a => a.status === 'scheduled' || a.status === 'in_progress');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [isTenantDropdownOpen, setIsTenantDropdownOpen] = useState(false);
+
+  const pendingAppointments = appointments.filter(
+    (a) => a.status === 'scheduled' || a.status === 'in_progress'
+  );
+
+  const roles = [
+    { id: 'superadmin', label: 'SaaS Super Admin', icon: Shield, color: '#f59e0b' },
+    { id: 'owner', label: 'Salon Owner POS', icon: Store, color: '#d97706' },
+    { id: 'staff', label: 'Stylist APK', icon: Scissors, color: '#a855f7' },
+    { id: 'customer', label: 'Customer App', icon: Smartphone, color: '#10b981' },
+  ];
 
   return (
-    <header style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '1rem 2rem',
-      background: 'var(--bg-glass)',
-      backdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--border-subtle)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-    }}>
-      {/* Search Input */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', maxWidth: '400px', width: '100%' }}>
-        <div style={{ position: 'relative', width: '100%' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-          <input 
-            type="text" 
-            placeholder="Search clients, phone, invoice #, services..." 
-            className="form-input"
-            style={{ paddingLeft: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-full)' }}
-          />
-        </div>
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.75rem 1.5rem',
+        background: 'var(--bg-glass)',
+        backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid var(--border-subtle)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        gap: '1rem',
+        flexWrap: 'wrap',
+      }}
+    >
+      {/* 4-Pillar Interactive Role Switcher */}
+      <div
+        style={{
+          display: 'flex',
+          background: 'var(--bg-secondary)',
+          borderRadius: 'var(--radius-full)',
+          padding: '4px',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        {roles.map((r) => {
+          const Icon = r.icon;
+          const isActive = activeRole === r.id;
+          return (
+            <button
+              key={r.id}
+              onClick={() => setActiveRole(r.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-full)',
+                border: 'none',
+                background: isActive
+                  ? `linear-gradient(135deg, ${r.color} 0%, rgba(217, 119, 6, 0.8) 100%)`
+                  : 'transparent',
+                color: isActive ? '#000' : 'var(--text-muted)',
+                fontWeight: isActive ? '800' : '600',
+                fontSize: '0.8125rem',
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)',
+                boxShadow: isActive ? `0 0 15px ${r.color}66` : 'none',
+              }}
+            >
+              <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+              <span>{r.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* Backend Status indicator */}
-        <div 
-          title={liveBackendConnected ? "FastAPI live backend connected on port 8000" : "Running on local interactive demo storage"}
+      {/* Center / Right Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Salon Tenant Switcher (Active in Owner, Staff, Customer modes) */}
+        {activeRole !== 'superadmin' && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsTenantDropdownOpen(!isTenantDropdownOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.4rem 0.85rem',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--accent-gold-glow)',
+                color: 'var(--text-main)',
+                fontSize: '0.8125rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: 'var(--accent-gold)',
+                  color: '#000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.65rem',
+                  fontWeight: '800',
+                }}
+              >
+                {org.logo_letter || 'S'}
+              </div>
+              <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {org.name}
+              </span>
+              <ChevronDown size={14} color="var(--text-dim)" />
+            </button>
+
+            {isTenantDropdownOpen && (
+              <div
+                className="glass-card"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '120%',
+                  width: '260px',
+                  padding: '0.5rem',
+                  zIndex: 50,
+                  boxShadow: 'var(--shadow-lg)',
+                }}
+              >
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', padding: '4px 8px' }}>
+                  Switch Active Salon Tenant
+                </div>
+                {tenants.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setActiveTenantId(t.id);
+                      setIsTenantDropdownOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      background: t.id === activeTenantId ? 'var(--bg-tertiary)' : 'transparent',
+                      color: t.id === activeTenantId ? 'var(--accent-gold-light)' : 'var(--text-main)',
+                      fontSize: '0.8125rem',
+                      fontWeight: t.id === activeTenantId ? '700' : '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    <div>
+                      <div>{t.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{t.city} • {t.plan}</div>
+                    </div>
+                    {t.id === activeTenantId && <CheckCircle2 size={14} color="var(--accent-gold)" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* WhatsApp Cloud Bot Simulation Trigger */}
+        <button
+          onClick={() =>
+            triggerWhatsApp('reengagement', {
+              customer_name: 'Neha Kapoor',
+            })
+          }
+          className="btn btn-secondary"
           style={{
+            borderRadius: 'var(--radius-full)',
+            fontSize: '0.75rem',
+            padding: '0.4rem 0.75rem',
+            border: '1px solid rgba(37, 211, 102, 0.3)',
+            color: '#25d366',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.35rem 0.75rem',
-            borderRadius: 'var(--radius-full)',
-            background: liveBackendConnected ? 'var(--color-success-bg)' : 'rgba(245, 158, 11, 0.12)',
-            border: `1px solid ${liveBackendConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            color: liveBackendConnected ? 'var(--color-success)' : 'var(--color-warning)',
+            gap: '5px',
           }}
+          title="Simulate WhatsApp 2-Way Bot"
         >
-          <Server size={14} />
-          <span>{liveBackendConnected ? 'FastAPI Live' : 'Demo Mode'}</span>
-        </div>
-
-        {/* Quick New Booking Button */}
-        <button 
-          onClick={onOpenNewBooking}
-          className="btn btn-primary"
-          style={{ borderRadius: 'var(--radius-full)' }}
-        >
-          <PlusCircle size={16} />
-          <span>New Appointment</span>
+          <MessageSquare size={14} />
+          <span>WhatsApp Bot</span>
         </button>
+
+        {/* Quick New Booking Button (Owner mode) */}
+        {activeRole === 'owner' && (
+          <button
+            onClick={onOpenNewBooking}
+            className="btn btn-primary"
+            style={{ borderRadius: 'var(--radius-full)', fontSize: '0.8125rem', padding: '0.4rem 0.85rem' }}
+          >
+            <PlusCircle size={15} />
+            <span>New Booking</span>
+          </button>
+        )}
 
         {/* Theme Switcher */}
         <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', padding: '3px', border: '1px solid var(--border-subtle)' }}>
-          <button 
+          <button
             onClick={() => setTheme('dark')}
             title="Dark Theme"
             style={{
@@ -86,15 +248,15 @@ export default function Navbar({ onOpenNewBooking }) {
               color: theme === 'dark' ? '#000' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 'var(--radius-full)',
-              padding: '6px',
+              padding: '5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
             }}
           >
-            <Moon size={14} />
+            <Moon size={13} />
           </button>
-          <button 
+          <button
             onClick={() => setTheme('rosegold')}
             title="Rose Gold Theme"
             style={{
@@ -102,15 +264,15 @@ export default function Navbar({ onOpenNewBooking }) {
               color: theme === 'rosegold' ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 'var(--radius-full)',
-              padding: '6px',
+              padding: '5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
             }}
           >
-            <Sparkles size={14} />
+            <Sparkles size={13} />
           </button>
-          <button 
+          <button
             onClick={() => setTheme('light')}
             title="Light Theme"
             style={{
@@ -118,60 +280,62 @@ export default function Navbar({ onOpenNewBooking }) {
               color: theme === 'light' ? '#000' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 'var(--radius-full)',
-              padding: '6px',
+              padding: '5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
             }}
           >
-            <Sun size={14} />
+            <Sun size={13} />
           </button>
         </div>
 
-        {/* Notifications Icon with Dropdown */}
+        {/* Notifications Icon */}
         <div style={{ position: 'relative' }}>
-          <button 
+          <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="btn btn-secondary btn-icon"
-            style={{ position: 'relative', borderRadius: 'var(--radius-full)' }}
+            style={{ position: 'relative', borderRadius: 'var(--radius-full)', width: '32px', height: '32px', padding: 0 }}
           >
-            <Bell size={18} />
+            <Bell size={16} />
             {pendingAppointments.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                width: '10px',
-                height: '10px',
-                background: 'var(--accent-gold)',
-                borderRadius: '50%',
-                boxShadow: '0 0 8px var(--accent-gold)',
-              }} />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '8px',
+                  height: '8px',
+                  background: 'var(--accent-gold)',
+                  borderRadius: '50%',
+                  boxShadow: '0 0 8px var(--accent-gold)',
+                }}
+              />
             )}
           </button>
 
           {showNotifications && (
-            <div 
+            <div
               className="glass-card"
               style={{
                 position: 'absolute',
                 right: 0,
                 top: '120%',
-                width: '320px',
+                width: '300px',
                 padding: '1rem',
                 zIndex: 50,
                 boxShadow: 'var(--shadow-lg)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h4 style={{ fontSize: '0.9rem' }}>Activity & Reminders</h4>
-                <span className="badge badge-gold">{pendingAppointments.length} Active</span>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '700' }}>Live Salon Events</h4>
+                <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>{pendingAppointments.length} Active</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '240px', overflowY: 'auto' }}>
-                {pendingAppointments.map(a => (
-                  <div key={a.id} style={{ padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem' }}>
-                    <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>{a.customer_name} — {a.service_name}</div>
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>With {a.staff_name} at {a.start_time}</div>
+                {pendingAppointments.map((a) => (
+                  <div key={a.id} style={{ padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem' }}>
+                    <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{a.customer_name} — {a.service_name}</div>
+                    <div style={{ color: 'var(--accent-gold-light)', fontSize: '0.7rem' }}>Stylist: {a.staff_name} • {a.start_time}</div>
                   </div>
                 ))}
               </div>
@@ -179,34 +343,37 @@ export default function Navbar({ onOpenNewBooking }) {
           )}
         </div>
 
-        {/* User Profile Pill */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          padding: '0.35rem 0.85rem',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-full)',
-        }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--accent-gold), #818cf8)',
+        {/* Role Avatar */}
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: '#000',
-            fontWeight: '700',
-            fontSize: '0.75rem',
-          }}>
-            SV
+            gap: '0.5rem',
+            padding: '0.25rem 0.65rem',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-full)',
+          }}
+        >
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '50%',
+              background: activeRole === 'superadmin' ? '#f59e0b' : activeRole === 'staff' ? '#a855f7' : activeRole === 'customer' ? '#10b981' : 'var(--accent-gold)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#000',
+              fontWeight: '800',
+              fontSize: '0.7rem',
+            }}
+          >
+            {activeRole === 'superadmin' ? 'SA' : activeRole === 'staff' ? 'EP' : activeRole === 'customer' ? 'CU' : 'SO'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>{org.owner_name}</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Salon Owner</span>
-          </div>
+          <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'capitalize' }}>
+            {activeRole === 'superadmin' ? 'Super Admin' : activeRole === 'owner' ? org.owner_name : activeRole === 'staff' ? 'Stylist View' : 'Customer View'}
+          </span>
         </div>
       </div>
     </header>
