@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { notificationAudio } from '../utils/notificationAudio';
 
 const AppContext = createContext();
 
@@ -312,6 +313,50 @@ export function AppProvider({ children }) {
     checkHealth();
   }, []);
 
+  // Real-Time WebSocket Hub Connection
+  useEffect(() => {
+    let ws = null;
+    let reconnectTimeout = null;
+
+    function connectWS() {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.hostname || 'localhost';
+        const wsUrl = `${protocol}//${host}:8000/api/v1/ws/${activeTenantId}/${activeRole}/client_${Date.now()}`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          setLiveBackendConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.event === 'appointment_created') {
+              notificationAudio.playBookingBell();
+            } else if (data.event === 'job_dispatched') {
+              notificationAudio.playJobDispatchAlert();
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          reconnectTimeout = setTimeout(connectWS, 6000);
+        };
+      } catch (e) {
+        // High-speed fallback
+      }
+    }
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [activeTenantId, activeRole]);
+
   const addToast = (message, type = 'success') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -494,7 +539,10 @@ export function AppProvider({ children }) {
 
     setAppointments((prev) => [newAppt, ...prev]);
 
-    // Trigger instant incoming alert for the assigned staff member
+    // Trigger instant incoming alert and sound for assigned stylist & POS bell
+    notificationAudio.playBookingBell();
+    notificationAudio.playJobDispatchAlert();
+
     setIncomingJobAlert({
       appointmentId: newId,
       customer_name: newAppt.customer_name,
@@ -533,6 +581,7 @@ export function AppProvider({ children }) {
   const staffCompleteJob = (appointmentId, tipAmount = 100) => {
     const appt = appointments.find((a) => a.id === appointmentId);
     updateAppointmentStatus(appointmentId, 'completed');
+    notificationAudio.playQueueTurnAlert();
     
     // Update stylist daily performance ledger
     if (appt) {
