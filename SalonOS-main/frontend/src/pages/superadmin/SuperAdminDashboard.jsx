@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import APKDistributionModal from './APKDistributionModal';
 import {
   Building2,
   Plus,
@@ -17,7 +18,8 @@ import {
   LogIn,
   MoreVertical,
   Sliders,
-  DollarSign
+  DollarSign,
+  Smartphone
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
@@ -34,6 +36,7 @@ export default function SuperAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPlan, setFilterPlan] = useState('all');
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
+  const [isAPKModalOpen, setIsAPKModalOpen] = useState(false);
 
   // New Tenant Form State
   const [tenantForm, setTenantForm] = useState({
@@ -118,10 +121,16 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
 
-        <button onClick={() => setIsOnboardModalOpen(true)} className="btn btn-primary" style={{ padding: '0.75rem 1.25rem' }}>
-          <Plus size={18} />
-          <span>Onboard New Salon Client</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button onClick={() => setIsAPKModalOpen(true)} className="btn btn-secondary" style={{ padding: '0.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Smartphone size={17} />
+            <span>Mobile APKs & Apps</span>
+          </button>
+          <button onClick={() => setIsOnboardModalOpen(true)} className="btn btn-primary" style={{ padding: '0.75rem 1.25rem' }}>
+            <Plus size={18} />
+            <span>Onboard New Salon Client</span>
+          </button>
+        </div>
       </div>
 
       {/* Global SaaS Platform KPIs */}
@@ -544,6 +553,9 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* APK Distribution Modal */}
+      <APKDistributionModal isOpen={isAPKModalOpen} onClose={() => setIsAPKModalOpen(false)} />
     </div>
   );
 }

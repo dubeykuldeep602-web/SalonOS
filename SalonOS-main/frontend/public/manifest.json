@@ -1,0 +1,17 @@
+{
+  "short_name": "SalonOS",
+  "name": "SalonOS — Multi-Tenant Salon Operating System",
+  "description": "Next-Gen Point of Sale, Stylist APK & Customer Booking Cloud Platform",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}
