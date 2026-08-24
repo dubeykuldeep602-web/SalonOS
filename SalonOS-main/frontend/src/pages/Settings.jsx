@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings as SettingsIcon, Save, Building, Moon, Sun, Sparkles, Shield, DollarSign } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Building, Moon, Sun, Sparkles, Shield, DollarSign, Crown, ArrowUpRight } from 'lucide-react';
+import SubscriptionCheckoutModal from '../components/subscription/SubscriptionCheckoutModal';
 
 export default function Settings() {
-  const { org, setOrg, theme, setTheme, addToast } = useApp();
+  const { org, setOrg, theme, setTheme, addToast, currentUser } = useApp();
 
   const [formData, setFormData] = useState({ ...org });
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -185,6 +187,43 @@ export default function Settings() {
           <span>Save Changes</span>
         </button>
       </form>
+
+      {/* SaaS Subscription Plan & Upgrade Card */}
+      <div className="glass-card" style={{ border: '1.5px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.04)', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
+          <Crown size={18} color="#f59e0b" />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>SaaS Subscription & Plan Upgrade</h3>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <span className="badge badge-gold" style={{ fontSize: '0.75rem' }}>Pro Growth · Monthly</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-success)' }}>✓ Active</span>
+            </div>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.5' }}>
+              You are currently on <strong>Pro Growth</strong> (3 branches · 15 stylists). Upgrade to unlock multi-city chains, white-label branding, and a dedicated 24/7 SLA.
+            </p>
+          </div>
+          <button
+            id="upgrade-plan-btn"
+            onClick={() => setIsSubModalOpen(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000' }}
+          >
+            <Crown size={16} />
+            <span>Upgrade Plan</span>
+            <ArrowUpRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      <SubscriptionCheckoutModal
+        isOpen={isSubModalOpen}
+        onClose={() => setIsSubModalOpen(false)}
+        currentPlan="pro"
+        onUpgrade={(plan) => addToast(`🎉 Upgraded to ${plan.name}! Your new limits are now live.`)}
+      />
     </div>
   );
 }
