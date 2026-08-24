@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm --prefix SalonOS-main/frontend install && npm --prefix SalonOS-main/frontend run build",
+  "outputDirectory": "SalonOS-main/frontend/dist",
+  "framework": "vite"
+}
