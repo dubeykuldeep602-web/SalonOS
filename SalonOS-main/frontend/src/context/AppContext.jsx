@@ -255,11 +255,43 @@ export function AppProvider({ children }) {
   // Active Staff profile
   const activeStaffMember = staff.find((s) => s.id === activeStaffId) || staff[0];
 
+  // Authentication & Session State
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('salonos_token') || 'demo_token_xyz');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('salonos_user');
+      return saved ? JSON.parse(saved) : {
+        id: 2,
+        full_name: 'Sophia Verma',
+        email: 'contact@luxeaura.com',
+        role: 'admin',
+        organization_id: 1,
+      };
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   // Sync theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('salonos_theme', theme);
   }, [theme]);
+
+  // Sync token & user to localStorage
+  useEffect(() => {
+    if (authToken) {
+      localStorage.setItem('salonos_token', authToken);
+    } else {
+      localStorage.removeItem('salonos_token');
+    }
+    if (currentUser) {
+      localStorage.setItem('salonos_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('salonos_user');
+    }
+  }, [authToken, currentUser]);
 
   // Check live health check on startup
   useEffect(() => {
@@ -339,6 +371,100 @@ export function AppProvider({ children }) {
       prev.map((t) => (t.id === id ? { ...t, plan: newPlan } : t))
     );
     addToast(`Subscription plan updated to ${newPlan}.`);
+  };
+
+  // ============================================================================
+  // Authentication & Role Management
+  // ============================================================================
+  const login = async (role, credentials = {}) => {
+    let userObj = null;
+    const generatedToken = `jwt_${role}_${Date.now()}`;
+
+    if (role === 'superadmin') {
+      userObj = {
+        id: 1,
+        full_name: 'Platform Super Admin',
+        email: credentials.email || 'admin@salonos.com',
+        role: 'superadmin',
+        organization_id: null,
+      };
+      setActiveRole('superadmin');
+    } else if (role === 'owner') {
+      userObj = {
+        id: 2,
+        full_name: org.owner_name || 'Sophia Verma',
+        email: credentials.email || org.email || 'contact@luxeaura.com',
+        role: 'admin',
+        organization_id: activeTenantId,
+      };
+      setActiveRole('owner');
+    } else if (role === 'staff') {
+      const selectedStaff = staff.find((s) => s.id === (credentials.staff_id || activeStaffId)) || staff[0];
+      userObj = {
+        id: 100 + selectedStaff.id,
+        full_name: credentials.staff_name || selectedStaff.full_name,
+        email: `staff.${selectedStaff.id}@salonos.com`,
+        role: 'staff',
+        organization_id: activeTenantId,
+        staff_id: selectedStaff.id,
+      };
+      setActiveStaffId(selectedStaff.id);
+      setActiveRole('staff');
+    } else if (role === 'customer') {
+      const selectedCust = customers.find((c) => c.id === (credentials.customer_id || activeCustomerId)) || customers[0];
+      userObj = {
+        id: 500 + selectedCust.id,
+        full_name: credentials.customer_name || selectedCust.full_name,
+        phone: credentials.phone || selectedCust.phone,
+        role: 'customer',
+        organization_id: activeTenantId,
+        customer_id: selectedCust.id,
+      };
+      setActiveCustomerId(selectedCust.id);
+      setActiveRole('customer');
+    }
+
+    setCurrentUser(userObj);
+    setAuthToken(generatedToken);
+    localStorage.setItem('salonos_token', generatedToken);
+    localStorage.setItem('salonos_user', JSON.stringify(userObj));
+    addToast(`👋 Welcome back, ${userObj.full_name}! (${userObj.role.toUpperCase()})`);
+    return userObj;
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setAuthToken(null);
+    localStorage.removeItem('salonos_token');
+    localStorage.removeItem('salonos_user');
+    addToast('Logged out of SalonOS session.', 'info');
+  };
+
+  const registerTenant = async (formData) => {
+    const newTenant = onboardTenant({
+      name: formData.salon_name,
+      owner_name: formData.owner_name,
+      email: formData.email,
+      phone: formData.phone,
+      city: formData.city,
+      state: formData.state,
+      plan: formData.plan,
+    });
+
+    setActiveTenantId(newTenant.id);
+    const userObj = {
+      id: 200 + newTenant.id,
+      full_name: formData.owner_name,
+      email: formData.email,
+      role: 'admin',
+      organization_id: newTenant.id,
+    };
+    setCurrentUser(userObj);
+    const generatedToken = `jwt_admin_${Date.now()}`;
+    setAuthToken(generatedToken);
+    setActiveRole('owner');
+    addToast(`🎉 Workspace launched for "${newTenant.name}"!`);
+    return newTenant;
   };
 
   // ============================================================================
@@ -606,6 +732,14 @@ export function AppProvider({ children }) {
   const value = {
     theme,
     setTheme,
+    // Authentication & Current User
+    currentUser,
+    authToken,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
+    login,
+    logout,
+    registerTenant,
     // Multi-tenant & Role
     tenants,
     setTenants,

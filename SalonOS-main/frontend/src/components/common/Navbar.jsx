@@ -15,7 +15,11 @@ import {
   Users,
   Store,
   MessageSquare,
-  ChevronDown
+  ChevronDown,
+  LogIn,
+  LogOut,
+  UserCheck,
+  Key
 } from 'lucide-react';
 
 export default function Navbar({ onOpenNewBooking }) {
@@ -28,13 +32,16 @@ export default function Navbar({ onOpenNewBooking }) {
     setActiveTenantId,
     activeRole,
     setActiveRole,
-    liveBackendConnected,
+    currentUser,
+    logout,
+    setIsAuthModalOpen,
     appointments,
     triggerWhatsApp,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [isTenantDropdownOpen, setIsTenantDropdownOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const pendingAppointments = appointments.filter(
     (a) => a.status === 'scheduled' || a.status === 'in_progress'
@@ -343,38 +350,126 @@ export default function Navbar({ onOpenNewBooking }) {
           )}
         </div>
 
-        {/* Role Avatar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.25rem 0.65rem',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-full)',
-          }}
-        >
-          <div
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: activeRole === 'superadmin' ? '#f59e0b' : activeRole === 'staff' ? '#a855f7' : activeRole === 'customer' ? '#10b981' : 'var(--accent-gold)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#000',
-              fontWeight: '800',
-              fontSize: '0.7rem',
-            }}
-          >
-            {activeRole === 'superadmin' ? 'SA' : activeRole === 'staff' ? 'EP' : activeRole === 'customer' ? 'CU' : 'SO'}
+        {/* User Auth Profile & Menu */}
+        {currentUser ? (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.25rem 0.65rem',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: 'var(--radius-full)',
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: activeRole === 'superadmin' ? '#f59e0b' : activeRole === 'staff' ? '#a855f7' : activeRole === 'customer' ? '#10b981' : 'var(--accent-gold)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000',
+                  fontWeight: '800',
+                  fontSize: '0.7rem',
+                }}
+              >
+                {currentUser.full_name ? currentUser.full_name.charAt(0) : 'U'}
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {currentUser.full_name}
+              </span>
+              <ChevronDown size={13} color="var(--text-dim)" />
+            </button>
+
+            {isProfileMenuOpen && (
+              <div
+                className="glass-card"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '120%',
+                  width: '220px',
+                  padding: '0.75rem',
+                  zIndex: 50,
+                  boxShadow: 'var(--shadow-lg)',
+                }}
+              >
+                <div style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)' }}>{currentUser.full_name}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{currentUser.email || currentUser.phone}</div>
+                  <span className="badge badge-gold" style={{ fontSize: '0.65rem', marginTop: '4px', textTransform: 'uppercase' }}>
+                    Role: {currentUser.role}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsAuthModalOpen(true);
+                    setIsProfileMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '0.4rem 0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Key size={14} />
+                  <span>Switch Auth Role</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsProfileMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '0.4rem 0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--color-danger)',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '4px',
+                  }}
+                >
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
           </div>
-          <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'capitalize' }}>
-            {activeRole === 'superadmin' ? 'Super Admin' : activeRole === 'owner' ? org.owner_name : activeRole === 'staff' ? 'Stylist View' : 'Customer View'}
-          </span>
-        </div>
+        ) : (
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="btn btn-primary"
+            style={{ borderRadius: 'var(--radius-full)', fontSize: '0.75rem', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <LogIn size={14} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

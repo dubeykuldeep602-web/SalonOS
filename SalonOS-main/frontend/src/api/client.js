@@ -1,11 +1,23 @@
 /**
  * SalonOS API Client
- * Seamlessly interfaces with the FastAPI backend with demo fallback.
+ * Seamlessly interfaces with the FastAPI backend with JWT Authorization & demo fallback.
  */
 
 const API_BASE = '/api/v1';
 
 export const apiClient = {
+  getAuthHeaders() {
+    const token = localStorage.getItem('salonos_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  },
+
   async get(endpoint, params = {}) {
     const orgId = localStorage.getItem('salonos_org_id') || '1';
     const query = new URLSearchParams({ organization_id: orgId, ...params });
@@ -13,10 +25,7 @@ export const apiClient = {
 
     try {
       const res = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (!res.ok) {
@@ -39,10 +48,7 @@ export const apiClient = {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(body),
       });
       const json = await res.json();

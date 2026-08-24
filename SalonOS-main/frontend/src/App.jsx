@@ -5,6 +5,7 @@ import Sidebar from './components/common/Sidebar';
 import Modal from './components/common/Modal';
 import Toast from './components/common/Toast';
 import WhatsAppModal from './components/common/WhatsAppModal';
+import LoginModal from './pages/auth/LoginModal';
 
 // 4-Pillar Core Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
@@ -35,7 +36,9 @@ export default function App() {
     addService,
     addStaff,
     addProduct,
-    org
+    org,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
   } = useApp();
 
   // Modals state
@@ -225,6 +228,7 @@ export default function App() {
 
       <Toast />
       <WhatsAppModal />
+      <LoginModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       {/* New Appointment Modal */}
       <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title="Book New Appointment">
