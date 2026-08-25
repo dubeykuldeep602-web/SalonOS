@@ -799,9 +799,129 @@ export function AppProvider({ children }) {
   };
 
   // ============================================================================
-  // POS & Catalog Actions
+  // Full Admin / Owner CRUD Operations with PostgreSQL Persistence
   // ============================================================================
-  const addCustomer = (customer) => {
+
+  // --- Services ---
+  const addService = async (srv) => {
+    const newId = services.length ? Math.max(...services.map((s) => s.id)) + 1 : 1;
+    const newService = { ...srv, id: newId, is_active: true, duration: `${srv.duration_minutes || 45} mins` };
+    setServices((prev) => [...prev, newService]);
+    apiClient.post('/services', {
+      name: srv.name,
+      description: srv.description,
+      category: srv.category || 'Hair',
+      duration_minutes: Number(srv.duration_minutes || 45),
+      price: Number(srv.price || 1500),
+      gst_applicable: srv.gst_applicable !== false,
+    }).catch(() => {});
+    addToast(`Service "${newService.name}" added to menu!`);
+    return newService;
+  };
+
+  const editService = async (id, updatedData) => {
+    setServices((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updatedData, duration: `${updatedData.duration_minutes || s.duration_minutes || 45} mins` } : s))
+    );
+    apiClient.put(`/services/${id}`, updatedData).catch(() => {});
+    addToast(`Service #${id} updated successfully!`);
+  };
+
+  const toggleServiceStatus = async (id) => {
+    setServices((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const nextState = s.is_active === false ? true : false;
+          addToast(`Service "${s.name}" is now ${nextState ? 'ENABLED / ACTIVE 🟢' : 'DISABLED / INACTIVE 🔴'}`);
+          return { ...s, is_active: nextState };
+        }
+        return s;
+      })
+    );
+    apiClient.patch(`/services/${id}/toggle`).catch(() => {});
+  };
+
+  const deleteService = async (id) => {
+    setServices((prev) => prev.filter((s) => s.id !== id));
+    apiClient.delete(`/services/${id}`).catch(() => {});
+    addToast(`Service #${id} removed from menu!`, 'info');
+  };
+
+  // --- Appointments ---
+  const editAppointment = async (id, updatedData) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updatedData } : a))
+    );
+    apiClient.put(`/appointments/${id}`, updatedData).catch(() => {});
+    addToast(`Appointment #${id} updated / rescheduled!`);
+  };
+
+  const deleteAppointment = async (id) => {
+    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    apiClient.delete(`/appointments/${id}`).catch(() => {});
+    addToast(`Appointment #${id} cancelled and removed.`, 'info');
+  };
+
+  // --- Staff & Stylists ---
+  const addStaff = async (stf) => {
+    const newId = staff.length ? Math.max(...staff.map((s) => s.id)) + 1 : 1;
+    const newMember = {
+      ...stf,
+      id: newId,
+      rating: 5.0,
+      active_bookings: 0,
+      is_active: true,
+      avatar: stf.full_name ? stf.full_name.slice(0, 2).toUpperCase() : 'ST',
+      hire_date: new Date().toISOString().split('T')[0],
+      commissionRate: 15,
+      is_clocked_in: true,
+      today_tips: 0,
+      today_services_done: 0,
+      today_revenue: 0,
+    };
+    setStaff((prev) => [...prev, newMember]);
+    apiClient.post('/staff', {
+      full_name: stf.full_name,
+      email: stf.email,
+      phone: stf.phone,
+      designation: stf.designation || stf.role,
+      specialization: stf.specialization,
+      notes: stf.notes,
+    }).catch(() => {});
+    addToast(`Staff member "${newMember.full_name}" registered!`);
+    return newMember;
+  };
+
+  const editStaff = async (id, updatedData) => {
+    setStaff((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s))
+    );
+    apiClient.put(`/staff/${id}`, updatedData).catch(() => {});
+    addToast(`Staff profile #${id} updated successfully!`);
+  };
+
+  const toggleStaffStatus = async (id) => {
+    setStaff((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const nextState = s.is_active === false ? true : false;
+          addToast(`${s.full_name} is now ${nextState ? 'ACTIVE 🟢' : 'ON-LEAVE / INACTIVE 🔴'}`);
+          return { ...s, is_active: nextState };
+        }
+        return s;
+      })
+    );
+    apiClient.patch(`/staff/${id}/toggle`).catch(() => {});
+  };
+
+  const deleteStaff = async (id) => {
+    setStaff((prev) => prev.filter((s) => s.id !== id));
+    apiClient.delete(`/staff/${id}`).catch(() => {});
+    addToast(`Staff member #${id} removed from roster.`, 'info');
+  };
+
+  // --- Customers CRM ---
+  const addCustomer = async (customer) => {
     const newId = customers.length ? Math.max(...customers.map((c) => c.id)) + 1 : 1;
     const newCust = {
       ...customer,
@@ -813,9 +933,76 @@ export function AppProvider({ children }) {
       last_visit: new Date().toISOString().split('T')[0],
     };
     setCustomers((prev) => [newCust, ...prev]);
+    apiClient.post('/customers', {
+      full_name: customer.full_name,
+      phone: customer.phone,
+      email: customer.email,
+      gender: customer.gender,
+      city: customer.city,
+      address: customer.address,
+      notes: customer.notes,
+    }).catch(() => {});
     addToast(`Customer ${newCust.full_name} registered!`);
     return newCust;
   };
+
+  const editCustomer = async (id, updatedData) => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updatedData } : c))
+    );
+    apiClient.put(`/customers/${id}`, updatedData).catch(() => {});
+    addToast(`Customer profile #${id} updated!`);
+  };
+
+  const deleteCustomer = async (id) => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    apiClient.delete(`/customers/${id}`).catch(() => {});
+    addToast(`Customer #${id} removed from CRM.`, 'info');
+  };
+
+  // --- Products & Inventory Stocks ---
+  const addProduct = async (prd) => {
+    const newId = products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1;
+    const newProduct = { ...prd, id: newId };
+    setProducts((prev) => [...prev, newProduct]);
+    apiClient.post('/products', {
+      name: prd.name,
+      sku: prd.sku,
+      category: prd.category,
+      unit: prd.unit || 'bottle',
+      quantity_in_stock: Number(prd.quantity_in_stock || 0),
+      reorder_level: Number(prd.reorder_level || 5),
+      unit_price: Number(prd.unit_price || 0),
+      cost_price: Number(prd.cost_price || 0),
+      supplier_name: prd.supplier_name,
+      notes: prd.notes,
+    }).catch(() => {});
+    addToast(`Product "${newProduct.name}" added to inventory!`);
+    return newProduct;
+  };
+
+  const editProduct = async (id, updatedData) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updatedData } : p))
+    );
+    apiClient.put(`/products/${id}`, updatedData).catch(() => {});
+    addToast(`Product #${id} updated successfully!`);
+  };
+
+  const deleteProduct = async (id) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    apiClient.delete(`/products/${id}`).catch(() => {});
+    addToast(`Product #${id} removed from inventory.`, 'info');
+  };
+
+  const updateProductStock = (id, delta) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, quantity_in_stock: Math.max(0, p.quantity_in_stock + delta) } : p))
+    );
+    apiClient.patch(`/products/${id}/stock`, { quantity_delta: delta }).catch(() => {});
+  };
+
+  const updateStock = updateProductStock;
 
   const addInvoice = (inv) => {
     const newId = invoices.length ? Math.max(...invoices.map((i) => i.id)) + 1 : 1001;
@@ -829,7 +1016,6 @@ export function AppProvider({ children }) {
     };
     setInvoices((prev) => [newInvoice, ...prev]);
 
-    // Update customer spend & loyalty
     if (inv.customer_name) {
       setCustomers((prev) =>
         prev.map((c) => {
@@ -849,45 +1035,6 @@ export function AppProvider({ children }) {
 
     addToast(`Invoice ${invoiceNumber} created and marked PAID!`);
     return newInvoice;
-  };
-
-  const addService = (srv) => {
-    const newId = services.length ? Math.max(...services.map((s) => s.id)) + 1 : 1;
-    const newService = { ...srv, id: newId, image: '✨' };
-    setServices((prev) => [...prev, newService]);
-    addToast(`Service "${newService.name}" added to menu!`);
-  };
-
-  const addStaff = (stf) => {
-    const newId = staff.length ? Math.max(...staff.map((s) => s.id)) + 1 : 1;
-    const newMember = {
-      ...stf,
-      id: newId,
-      rating: 5.0,
-      active_bookings: 0,
-      avatar: stf.full_name ? stf.full_name.slice(0, 2).toUpperCase() : 'ST',
-      hire_date: new Date().toISOString().split('T')[0],
-      commissionRate: 15,
-      is_clocked_in: true,
-      today_tips: 0,
-      today_services_done: 0,
-      today_revenue: 0,
-    };
-    setStaff((prev) => [...prev, newMember]);
-    addToast(`Staff member "${newMember.full_name}" registered!`);
-  };
-
-  const addProduct = (prd) => {
-    const newId = products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1;
-    const newProduct = { ...prd, id: newId };
-    setProducts((prev) => [...prev, newProduct]);
-    addToast(`Product "${newProduct.name}" added to inventory!`);
-  };
-
-  const updateProductStock = (id, delta) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, quantity_in_stock: Math.max(0, p.quantity_in_stock + delta) } : p))
-    );
   };
 
   // WhatsApp Simulation Trigger
@@ -934,15 +1081,28 @@ export function AppProvider({ children }) {
     dashboardData,
     loadBackendData,
     refreshData: loadBackendData,
-    // Workflows
+    // Full CRUD Workflows
     addAppointment,
+    editAppointment,
     updateAppointmentStatus,
+    deleteAppointment,
     addCustomer,
+    editCustomer,
+    deleteCustomer,
     addInvoice,
     addService,
+    editService,
+    toggleServiceStatus,
+    deleteService,
     addStaff,
+    editStaff,
+    toggleStaffStatus,
+    deleteStaff,
     addProduct,
+    editProduct,
+    deleteProduct,
     updateProductStock,
+    updateStock,
     addToast,
     removeToast,
     // Staff App

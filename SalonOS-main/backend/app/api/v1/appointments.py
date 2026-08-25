@@ -1,10 +1,10 @@
 """
 app/api/v1/appointments.py
 
-Appointment scheduling, lifecycle status updates, and auto-assignment dispatch.
+Appointment scheduling, lifecycle status updates, rescheduling, and full CRUD.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -26,6 +26,16 @@ class AppointmentCreate(BaseModel):
     staff_id: Optional[int] = None
     start_time: datetime
     end_time: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
+class AppointmentUpdate(BaseModel):
+    customer_id: Optional[int] = None
+    service_id: Optional[int] = None
+    staff_id: Optional[int] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    status: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -58,7 +68,7 @@ def list_appointments(
         Appointment.organization_id == organization_id,
         Appointment.deleted_at.is_(None),
     )
-    if status_filter:
+    if status_filter and status_filter.lower() != "all":
         stmt = stmt.where(Appointment.status == status_filter)
     stmt = stmt.order_by(Appointment.start_time.desc())
     appts = db.scalars(stmt).all()
@@ -73,7 +83,6 @@ def create_appointment(
 ) -> APIResponse[AppointmentOut]:
     assigned_staff_id = payload.staff_id
 
-    # Auto-dispatch logic if no specific stylist requested
     if not assigned_staff_id:
         active_staff = db.scalars(
             select(Staff).where(
@@ -100,6 +109,37 @@ def create_appointment(
     return APIResponse.ok(data=AppointmentOut.model_validate(appt), message="Appointment scheduled and dispatched successfully.")
 
 
+@router.put("/{appt_id}", response_model=APIResponse[AppointmentOut], summary="Update / Reschedule appointment")
+def update_appointment(
+    appt_id: int,
+    payload: AppointmentUpdate,
+    organization_id: int = Depends(get_organization_id),
+    db: Session = Depends(get_db),
+) -> APIResponse[AppointmentOut]:
+    appt = db.get(Appointment, appt_id)
+    if not appt or appt.organization_id != organization_id or appt.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+
+    if payload.customer_id is not None:
+        appt.customer_id = payload.customer_id
+    if payload.service_id is not None:
+        appt.service_id = payload.service_id
+    if payload.staff_id is not None:
+        appt.staff_id = payload.staff_id
+    if payload.start_time is not None:
+        appt.start_time = payload.start_time
+    if payload.end_time is not None:
+        appt.end_time = payload.end_time
+    if payload.status is not None:
+        appt.status = payload.status
+    if payload.notes is not None:
+        appt.notes = payload.notes
+
+    db.commit()
+    db.refresh(appt)
+    return APIResponse.ok(data=AppointmentOut.model_validate(appt), message="Appointment updated successfully.")
+
+
 @router.patch("/{appt_id}/status", response_model=APIResponse[AppointmentOut], summary="Update appointment status")
 def update_appointment_status(
     appt_id: int,
@@ -115,3 +155,19 @@ def update_appointment_status(
     db.commit()
     db.refresh(appt)
     return APIResponse.ok(data=AppointmentOut.model_validate(appt), message=f"Status updated to {payload.status}.")
+
+
+@router.delete("/{appt_id}", response_model=APIResponse[dict], summary="Delete / Cancel appointment")
+def delete_appointment(
+    appt_id: int,
+    organization_id: int = Depends(get_organization_id),
+    db: Session = Depends(get_db),
+) -> APIResponse[dict]:
+    appt = db.get(Appointment, appt_id)
+    if not appt or appt.organization_id != organization_id or appt.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+
+    appt.deleted_at = datetime.now(timezone.utc)
+    appt.status = "cancelled"
+    db.commit()
+    return APIResponse.ok(data={"deleted_id": appt_id}, message="Appointment cancelled and deleted successfully.")

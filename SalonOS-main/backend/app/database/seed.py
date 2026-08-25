@@ -689,6 +689,31 @@ def seed_database(db: Optional[Session] = None, force: bool = False) -> None:
                 )
                 db.add(prod)
 
+        db.flush()
+
+        # Synchronize PostgreSQL auto-increment sequences to MAX(id)
+        from sqlalchemy import text
+        table_names = [
+            "organizations",
+            "users",
+            "staff",
+            "services",
+            "customers",
+            "appointments",
+            "invoices",
+            "payments",
+            "products",
+        ]
+        for tbl in table_names:
+            try:
+                db.execute(
+                    text(
+                        f"SELECT setval(pg_get_serial_sequence('{tbl}', 'id'), coalesce(max(id), 1)) FROM {tbl};"
+                    )
+                )
+            except Exception as seq_err:
+                logger.debug("Sequence sync notice for %s: %s", tbl, seq_err)
+
         db.commit()
         logger.info("✅ Database seeded successfully with SalonOS enterprise records!")
 
