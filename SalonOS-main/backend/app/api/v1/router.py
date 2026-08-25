@@ -12,6 +12,7 @@ from app.api.v1 import (
     customers,
     dashboard,
     health,
+    invoices,
     organizations,
     products,
     services,
@@ -33,3 +34,4 @@ api_router.include_router(staff.router)
 api_router.include_router(services.router)
 api_router.include_router(customers.router)
 api_router.include_router(products.router)
+api_router.include_router(invoices.router)
