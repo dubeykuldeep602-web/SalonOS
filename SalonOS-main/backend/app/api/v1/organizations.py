@@ -6,7 +6,7 @@ SaaS Super Admin multi-tenant organization onboarding & management endpoints.
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/organizations", tags=["Organizations & Tenants"])
 class OrganizationCreate(BaseModel):
     name: str
     owner_name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     gst_number: Optional[str] = None
     address: Optional[str] = None
@@ -49,8 +49,8 @@ class OrganizationOut(BaseModel):
 @router.get("", response_model=APIResponse[List[OrganizationOut]], summary="List all salon tenants")
 def list_organizations(
     db: Session = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    skip: int = 0,
+    limit: int = 50,
 ) -> APIResponse[List[OrganizationOut]]:
     stmt = select(Organization).where(Organization.deleted_at.is_(None)).offset(skip).limit(limit)
     orgs = db.scalars(stmt).all()

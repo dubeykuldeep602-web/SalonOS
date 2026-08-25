@@ -6,7 +6,7 @@ Customer CRM, client profiles, and visit history.
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/customers", tags=["Customer CRM"])
 class CustomerCreate(BaseModel):
     full_name: str
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     gender: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None

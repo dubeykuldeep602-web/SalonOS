@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
+from app.database.seed import seed_database
 from app.exceptions import register_exception_handlers
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    logger.info("Starting %s v%s", settings.APP_NAME, settings.APP_VERSION)
+    logger.info("Starting %s v%s on %s environment", settings.APP_NAME, settings.APP_VERSION, settings.ENVIRONMENT)
+    try:
+        seed_database()
+    except Exception as exc:
+        logger.warning("Startup database check/seed warning: %s", exc)
     yield
     logger.info("Shutting down %s", settings.APP_NAME)
 

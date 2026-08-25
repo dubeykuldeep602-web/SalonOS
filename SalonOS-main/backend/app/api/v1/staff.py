@@ -6,7 +6,7 @@ Staff and stylist roster, queue, and profile management.
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/staff", tags=["Staff & Stylists"])
 
 class StaffCreate(BaseModel):
     full_name: str
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     designation: Optional[str] = "Hair Stylist"
     specialization: Optional[str] = None

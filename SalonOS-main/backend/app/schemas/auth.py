@@ -5,7 +5,7 @@ Pydantic schemas for authentication, token exchange, and user profiles.
 """
 
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -29,7 +29,7 @@ class CustomerOTPRequest(BaseModel):
 class TenantRegisterRequest(BaseModel):
     salon_name: str = Field(..., min_length=2, max_length=255)
     owner_name: str = Field(..., min_length=2, max_length=255)
-    email: EmailStr
+    email: str
     password: str = Field(..., min_length=6)
     phone: str
     plan: str = "Pro Growth"
